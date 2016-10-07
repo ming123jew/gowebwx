@@ -37,7 +37,6 @@ import (
 )
 
 func main() {
-	fmt.Println("vim-go")
 	w := webwx.NewWebWx()
 	w.OnOnline(func() {
 		fmt.Println("Online!")
@@ -55,3 +54,4 @@ func main() {
 - python https://github.com/lyyyuna/wechat_robot
 - python https://github.com/Urinx/WeixinBot
 - python https://github.com/liuwons/wxBot
+- go https://github.com/ManiacMike/gorobot
