@@ -7,7 +7,6 @@ import "strings"
 const (
 	LANG     = "zh_CN"
 	RES_PATH = "/zh_CN/htmledition/v2/"
-	APPID    = ""
 
 	API_jsLogin            = "/jslogin?appid=wx782c26e4c19acffb&fun=new" // use w.login_host
 	API_redirecturi        = "/cgi-bin/mmwebwx-bin/webwxnewloginpage"    // use w.host, will change host

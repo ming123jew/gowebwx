@@ -76,22 +76,6 @@ func (w *webwx) api_webwxinit() *http.Request {
 	return r
 }
 
-func (w *webwx) api_webwxlogout(typ int) *http.Request {
-	u := fmt.Sprintf("https://%s%s?redirect=1&type=%v&skey=%s", w.base_host, API_webwxlogout, typ, url.QueryEscape(w.skey))
-	formdata := fmt.Sprintf("sid=%s&uin=%s", w.sid, w.uin)
-	rd := strings.NewReader(formdata)
-	r, err := http.NewRequest("POST", u, rd)
-	if err != nil {
-		fmt.Println("err:", err)
-		return nil
-	}
-	updateRequestHeader(w, r, "*")
-	r.Header.Set("Upgrade-Insecure-Requests", "1")
-	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	r.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-	return r
-}
-
 func (w *webwx) api_synccheck() *http.Request {
 	if w.sync_time == 0 {
 		w.sync_time = TimeMs()
@@ -136,7 +120,6 @@ func (w *webwx) api_webwxstatusnotify(to string, code int) *http.Request {
 	return r
 }
 
-//https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxgetcontact?r=1475641510510&seq=0&skey=@crypt_24c998a9_696f333b08f9659566ef80855754908b
 func (w *webwx) api_webwxgetcontact(seq int) *http.Request {
 	u := fmt.Sprintf("https://%s%s?pass_ticket=%s&r=%v&seq=%v&skey=%s", w.base_host, API_webwxgetcontact, w.pass_ticket, TimeMs(), seq, url.QueryEscape(w.skey))
 	r, _ := http.NewRequest("GET", u, nil)
@@ -144,7 +127,6 @@ func (w *webwx) api_webwxgetcontact(seq int) *http.Request {
 	return r
 }
 
-//https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxbatchgetcontact?type=ex&r=1475641531039
 func (w *webwx) api_webwxbatchgetcontact(usernames []string) *http.Request {
 	u := fmt.Sprintf("https://%s%s?type=ex&r=%v&pass_ticket=%s", w.base_host, API_webwxbatchgetcontact, TimeMs(), w.pass_ticket)
 	b, _ := json.Marshal(BatchGetContactRequest{})
@@ -169,9 +151,14 @@ func (w *webwx) api_webwxgetheadimg(seq int, username string) *http.Request {
 	return r
 }
 
-func (w *webwx) api_webwxupdatechatroom() *http.Request {
+func (w *webwx) api_webwxupdatechatroom(mod, room, members string) *http.Request {
 	u := fmt.Sprintf("https://%s%s?pass_ticket=%s", w.base_host, API_webwxupdatechatroom, w.pass_ticket)
-	b, _ := json.Marshal(SendMsgRequest{})
+	var b []byte
+	if mod == "add" {
+		b, _ = json.Marshal(UpdateChatRoomAddRequest{BaseRequest: w.BaseRequest, ChatRoomName: room, AddMemberList: members})
+	} else {
+		b, _ = json.Marshal(UpdateChatRoomDelRequest{BaseRequest: w.BaseRequest, ChatRoomName: room, DelMemberList: members})
+	}
 	rd := strings.NewReader(string(b))
 	r, _ := http.NewRequest("POST", u, rd)
 	updateRequestHeader(w, r, "json")
@@ -179,8 +166,15 @@ func (w *webwx) api_webwxupdatechatroom() *http.Request {
 	return r
 }
 
-// OPTION
-// POST
+// TODO API_webwxdownloadmedia
+func (w *webwx) api_webwxdownloadmedia() *http.Request {
+	u := fmt.Sprintf("https://%s%s?pass_ticket=%s", w.upload_host, API_webwxdownloadmedia, w.pass_ticket)
+	r, _ := http.NewRequest("GET", u, nil)
+	return r
+}
+
+// TODO API_webwxuploadmedia
+// need first OPTION then POST
 func (w *webwx) api_webwxuploadmedia(method string) *http.Request {
 	u := fmt.Sprintf("https://%s%s?pass_ticket=%s", w.upload_host, API_webwxuploadmedia, w.pass_ticket)
 	b, _ := json.Marshal(SendMsgRequest{})
@@ -192,13 +186,33 @@ func (w *webwx) api_webwxuploadmedia(method string) *http.Request {
 		r.Header.Set("Access-Control-Request-Headers", "")
 	}
 	// TODO wrong content type
-	r.Header.Set("Content-Type", "application/json;charset=UTF-8")
+	// r.Header.Set("Content-Type", "application/json;charset=UTF-8")
 	//Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryCg0ZCaBdxraXFCtS
 	return r
 }
 
 func (w *webwx) api_webwxsendmsg() *http.Request {
 	u := fmt.Sprintf("https://%s%s?pass_ticket=%s", w.base_host, API_webwxsendmsg, w.pass_ticket)
+	b, _ := json.Marshal(SendMsgRequest{})
+	rd := strings.NewReader(string(b))
+	r, _ := http.NewRequest("POST", u, rd)
+	updateRequestHeader(w, r, "json")
+	r.Header.Set("Content-Type", "application/json;charset=UTF-8")
+	return r
+}
+
+func (w *webwx) api_webwxsendmsgimg() *http.Request {
+	u := fmt.Sprintf("https://%s%s?pass_ticket=%s", w.base_host, API_webwxsendmsgimg, w.pass_ticket)
+	b, _ := json.Marshal(SendMsgRequest{})
+	rd := strings.NewReader(string(b))
+	r, _ := http.NewRequest("POST", u, rd)
+	updateRequestHeader(w, r, "json")
+	r.Header.Set("Content-Type", "application/json;charset=UTF-8")
+	return r
+}
+
+func (w *webwx) api_webwxsendmsgvedio() *http.Request {
+	u := fmt.Sprintf("https://%s%s?pass_ticket=%s", w.base_host, API_webwxsendmsgvedio, w.pass_ticket)
 	b, _ := json.Marshal(SendMsgRequest{})
 	rd := strings.NewReader(string(b))
 	r, _ := http.NewRequest("POST", u, rd)
@@ -225,3 +239,34 @@ func (w *webwx) api_webwxsendappmsg() *http.Request {
 	r.Header.Set("Content-Type", "application/json;charset=UTF-8")
 	return r
 }
+
+// TODO API_webwxlogout
+func (w *webwx) api_webwxlogout(typ int) *http.Request {
+	u := fmt.Sprintf("https://%s%s?redirect=1&type=%v&skey=%s", w.base_host, API_webwxlogout, typ, url.QueryEscape(w.skey))
+	formdata := fmt.Sprintf("sid=%s&uin=%s", w.sid, w.uin)
+	rd := strings.NewReader(formdata)
+	r, err := http.NewRequest("POST", u, rd)
+	if err != nil {
+		fmt.Println("err:", err)
+		return nil
+	}
+	updateRequestHeader(w, r, "*")
+	r.Header.Set("Upgrade-Insecure-Requests", "1")
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+	return r
+}
+
+// TODO API_webwxpreview
+// TODO API_webwxgetmsgimg
+// TODO API_webwxgetmedia
+// TODO API_webwxgetvideo
+// TODO API_webwxgetvoice
+// TODO API_webwxcreatechatroom
+// TODO API_webwxcheckurl
+// TODO API_webwxverifyuser
+// TODO API_webwxfeedback
+// TODO API_webwxreport
+// TODO API_webwxsearch
+// TODO API_webwxoplog
+// TODO API_checkupload
