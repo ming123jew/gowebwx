@@ -14,5 +14,5 @@ func main() {
 	w.OnOffline(func() {
 		fmt.Println("Offline!")
 	})
-	w.Start()
+	w.Start(0)
 }

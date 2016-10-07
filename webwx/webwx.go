@@ -160,7 +160,7 @@ func (w *webwx) login_redirect() {
 	}
 }
 
-func (w *webwx) webwxinit() {
+func (w *webwx) webwxinit() int {
 	w._checkerror()
 	w.BaseRequest = BaseRequest{
 		Uin:      w.uin,
@@ -174,9 +174,9 @@ func (w *webwx) webwxinit() {
 	err := json.Unmarshal(b, &resp)
 	if err != nil {
 		log.Error("webwxinit unmarshal error:", err)
-		ioutil.WriteFile("_debug_init.json", b, 400)
+		//ioutil.WriteFile("_debug_init.json", b, 400)
 		w.err = err
-		return
+		return 1
 	}
 
 	b, _ = json.Marshal(resp)
@@ -184,11 +184,13 @@ func (w *webwx) webwxinit() {
 	switch resp.BaseResponse.Ret {
 	case 0:
 	case 1100, 1101, 1102:
-		w.err = errors.New("init Login on other device!")
-		return
+		log.Error("webwxinit Logined on other device!")
+		w.err = errors.New("webwxinit Login on other device!")
+		return -1
 	case 1205:
-		w.err = errors.New("init 1205")
-		return
+		log.Error("webwxinit 1205")
+		w.err = errors.New("webwxinit 1205")
+		return -2
 	}
 
 	w.User = resp.User
@@ -223,7 +225,7 @@ func (w *webwx) webwxinit() {
 	// 16 times until o.Seq is 0
 
 	// start synccheck
-
+	return 0
 }
 
 func (w *webwx) webwxlogout(typ int) {
@@ -301,10 +303,10 @@ func (w *webwx) webwxbatchgetcontact(usernames []string) {
 
 func (w *webwx) synccheck() (retcode, selector string) {
 	w._checkerror()
-	log.Info("webwx checking..")
+	log.Info("sycnchecking..")
 	r := w.api_synccheck()
 	s := w._strreq(r)
-	log.Debug("Synccheck:", s)
+	log.Info("synccheck result:", s)
 	p := regexp.MustCompile(`\{retcode:"(\d+)"\s*,\s*selector:"(\d+)"}`)
 	match := p.FindStringSubmatch(s)
 	if len(match) == 3 {
@@ -408,11 +410,14 @@ func (w *webwx) reset() {
 	w.sync_time = 0
 }
 
-func (w *webwx) _start() {
+func (w *webwx) _start(retries int) {
 	defer func() {
 		log.Info("defered Done.")
 	}()
 
+	run_retries := retries
+
+START_RUN:
 	w.reset()
 	w.getuuid()
 	w.getqrcode()
@@ -440,8 +445,19 @@ CHECK_LOGIN_LOOP:
 	}
 
 	w.login_redirect()
-	w.webwxinit()
 
+	// if failed when login, retry from beginning
+	res := w.webwxinit()
+	log.Info("webinit result", res, w.err)
+	if res < 0 && (run_retries <= -1 || run_retries > 0) {
+		if run_retries > 0 {
+			run_retries -= 1
+		}
+		goto START_RUN
+	}
+	w._checkerror()
+
+	w.running = true
 	if w.on_online != nil {
 		w.on_online()
 	}
@@ -470,16 +486,26 @@ CHECK_SYNC_LOOP:
 		w.on_offline()
 	}
 
+	// if failed looping, retry from beginning
+	if run_retries <= -1 || run_retries > 0 {
+		if run_retries > 0 {
+			run_retries -= 1
+		}
+		goto START_RUN
+	}
+
 	// no error occurred till now
 	// tell main goroutine to stop
 	w.exit <- 1
 }
 
-func (w *webwx) Start() {
-	go w._start()
+func (w *webwx) Start(retries int) {
+	go w._start(retries)
 	<-w.exit
-	log.Info("exit")
+	w.running = false
+
 	// TODO: maybe do some cleanup
+	log.Info("exit")
 
 	if w.on_exit != nil {
 		w.on_exit()
@@ -487,11 +513,9 @@ func (w *webwx) Start() {
 }
 
 func (w *webwx) Stop() {
-	log.Info("Stop!")
-}
-
-func (w *webwx) Offline() {
-	// TODO
+	if w.running {
+		w.exit <- 1
+	}
 }
 
 func (w *webwx) SendSessionSay() {
