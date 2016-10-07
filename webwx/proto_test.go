@@ -18,7 +18,20 @@ func TestProtoEncodeBlank(t *testing.T) {
 }
 
 func TestProtoDecodePartial(t *testing.T) {
-	// TODO
+	data := []byte(`{"BaseRequest":{"Uin":1377554769,"Sid":"JkpTzkoC7p3Qgo+n","Skey":"@crypt_24c998a9_6b0fed013c5501ac8ecd78585880ba40","DeviceID":"e738942600395861"}}`)
+	var r1 InitRequest
+	var r2 StatusNotifyRequest
+	var r3 BatchGetContactRequest
+	var r4 SyncRequest
+	var r5 UpdateChatRoomAddRequest
+	var r6 VerifyUserRequest
+
+	for _, r := range []interface{}{r1, r2, r3, r4, r5, r6} {
+		err := json.Unmarshal(data, &r)
+		if err != nil {
+			t.Error("Partial Unmarshall failed", err)
+		}
+	}
 }
 
 func _testProtocol(t *testing.T, filename string, r interface{}, debug bool) {
