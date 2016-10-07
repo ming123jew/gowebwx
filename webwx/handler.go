@@ -1,0 +1,26 @@
+package webwx
+
+// 2440
+func (w *webwx) processMessage(msg Msg) {
+	switch msg.MsgType {
+	case MSGTYPE_SYSNOTICE:
+	case MSGTYPE_STATUSNOTIFY:
+	case MSGTYPE_APP:
+	case MSGTYPE_EMOTICON:
+	case MSGTYPE_IMAGE:
+	case MSGTYPE_VOICE:
+	case MSGTYPE_VIDEO:
+	case MSGTYPE_MICROVIDEO:
+	case MSGTYPE_TEXT:
+	case MSGTYPE_RECALLED:
+	case MSGTYPE_LOCATION:
+	case MSGTYPE_VOIPMSG:
+	case MSGTYPE_VOIPNOTIFY:
+	case MSGTYPE_VOIPINVITE:
+	case MSGTYPE_POSSIBLEFRIEND_MSG:
+	case MSGTYPE_VERIFYMSG:
+	case MSGTYPE_SHARECARD:
+	case MSGTYPE_SYS:
+	default:
+	}
+}
